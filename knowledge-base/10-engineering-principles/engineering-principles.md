@@ -36,6 +36,20 @@ Stable cross-project reasoning rules that guide implementation decisions.
   testing, and local workflows should shorten feedback loops.
 - Standardize where it increases consistency and trust. Leave room for local
   choice only when it does not weaken core principles.
+- Keep environment configuration explicit and fail fast when required settings
+  are missing or invalid.
+- Prefer explicit composition roots for infrastructure and application wiring.
+- Keep production behavior stricter than development behavior.
+- Treat offline, degraded network, and recovery paths as first-class concerns
+  in mobile and distributed systems.
+- Isolate platform-sensitive and infrastructure-sensitive logic behind explicit
+  boundaries.
+- Prefer consistent error models that preserve actionable context across
+  boundaries.
+- Keep delivery pipelines environment-aware and reproducible.
+- Favor designs that can be validated through integration tests and dependency
+  injection construction checks.
+- Use environment-specific configuration instead of hidden runtime defaults.
 
 ## Preferred Patterns
 
@@ -44,6 +58,9 @@ Stable cross-project reasoning rules that guide implementation decisions.
 - Automation for repeated operational or development work.
 - Observable system boundaries with clear ownership and recovery paths.
 - Documentation that stays close to the code and operating reality.
+- Explicit startup validation for required configuration.
+- Composition roots that make system wiring visible.
+- Environment-aware telemetry, deployment, and runtime behavior.
 
 ## Forbidden Patterns
 
@@ -52,3 +69,4 @@ Stable cross-project reasoning rules that guide implementation decisions.
 - Swallowing exceptions or returning ambiguous empty results without context.
 - Process that adds ceremony without improving outcomes.
 - Local conventions that weaken shared principles without explicit justification.
+- Implicit runtime defaults for critical environment or deployment settings.

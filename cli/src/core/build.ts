@@ -67,8 +67,8 @@ async function resolveSections(input: BuildInput): Promise<BuildSection[]> {
     sections.push(
       await loadSection(
         input.kbPath,
-        path.join("10-principles", `${principle}.md`),
-        path.join("knowledge-base", "10-principles", `${principle}.md`),
+        path.join("10-engineering-principles", `${principle}.md`),
+        path.join("knowledge-base", "10-engineering-principles", `${principle}.md`),
         principle,
         "Engineering Principles",
       ),
@@ -79,8 +79,8 @@ async function resolveSections(input: BuildInput): Promise<BuildSection[]> {
     sections.push(
       await loadSection(
         input.kbPath,
-        path.join("20-standards", "10-core", `${standard}.md`),
-        path.join("knowledge-base", "20-standards", "10-core", `${standard}.md`),
+        path.join("20-coding-standards", "10-core", `${standard}.md`),
+        path.join("knowledge-base", "20-coding-standards", "10-core", `${standard}.md`),
         standard,
         "Core Technical Standards",
       ),
@@ -91,8 +91,8 @@ async function resolveSections(input: BuildInput): Promise<BuildSection[]> {
     sections.push(
       await loadSection(
         input.kbPath,
-        path.join("20-standards", "20-language", `${language}.md`),
-        path.join("knowledge-base", "20-standards", "20-language", `${language}.md`),
+        path.join("20-coding-standards", "20-language", `${language}.md`),
+        path.join("knowledge-base", "20-coding-standards", "20-language", `${language}.md`),
         language,
         "Language Standards",
       ),
@@ -103,8 +103,8 @@ async function resolveSections(input: BuildInput): Promise<BuildSection[]> {
     sections.push(
       await loadSection(
         input.kbPath,
-        path.join("20-standards", "30-framework", `${framework}.md`),
-        path.join("knowledge-base", "20-standards", "30-framework", `${framework}.md`),
+        path.join("20-coding-standards", "40-framework", `${framework}.md`),
+        path.join("knowledge-base", "20-coding-standards", "40-framework", `${framework}.md`),
         framework,
         "Framework Standards",
       ),
