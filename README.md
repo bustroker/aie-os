@@ -43,9 +43,10 @@ The current precedence model is:
 3. Engineering principles
 4. Core technical standards
 5. Language standards
-6. Framework standards
-7. Response style
-8. Persona
+6. Application-type standards
+7. Framework standards
+8. Response style
+9. Persona
 
 Lower-precedence layers may refine earlier layers, but may not contradict or
 weaken them.
@@ -61,7 +62,9 @@ aie-os/
   knowledge-base/
 ```
 
-- `knowledge-base/` contains reusable knowledge only: principles and standards.
+- `knowledge-base/10-engineering-principles/` contains reusable engineering
+  principles.
+- `knowledge-base/20-coding-standards/` contains reusable coding standards.
 - `agent/` contains reusable behavior configuration: style and persona.
 - `cli/` contains the package-ready TypeScript builder and delivery adapters.
 
@@ -87,8 +90,8 @@ When the CLI is installed independently, pass `--kb-path` and, if needed,
 
 ## Developing The CLI
 
-The CLI lives under `cli/` and is intentionally separate from both the KB and
-the reusable agent configuration.
+The CLI lives under `cli/` and is intentionally separate from both the
+knowledge-base and the reusable agent configuration.
 
 Typical local workflow:
 
