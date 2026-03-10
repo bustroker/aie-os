@@ -39,17 +39,14 @@ export type ExecutionOptions = BuildExecutionOptions | InitExecutionOptions;
 
 type InitPromptDefaults = {
   agentPath: string;
-  globalSkillsPath: string;
+  skillsPath: string;
   kbPath: string;
-  projectCodingStandardsPath: string;
-  projectContextPath: string;
-  projectSkillsPath: string;
 };
 
 type InitSelections = {
   applicationType: string;
   frameworks: string[];
-  language: string;
+  languages: string[];
   persona: string;
   style: string;
 };
@@ -57,22 +54,22 @@ type InitSelections = {
 const PROJECT_AIE_DIRECTORY = ".aie-os";
 const BUILD_DIRECTORY = "build";
 const MANIFEST_NAME = "aie-os.json";
+const PROJECT_CONTEXT_DIRECTORY = "project-context";
+const PROJECT_CODING_STANDARDS_DIRECTORY = "project-coding-standards";
+const PROJECT_SKILLS_DIRECTORY = "project-skills";
 const TOOL_NAME = "codex";
 
 export const usageText = `AIE OS
 
 Usage:
-  init [--project-path <path>] [--kb-path <path>] [--agent-path <path>] [--global-skills-path <path>] [--project-context-path <path>] [--project-coding-standards-path <path>] [--project-skills-path <path>]
-  build --tool codex
+  init [--project-path <path>] [--kb-path <path>] [--agent-path <path>] [--skills-path <path>]
+  build --tool codex [--project-path <path>]
 
 Options:
   --project-path                    Target repository. Defaults to the current directory.
-  --kb-path                         Shared knowledge-base path. Prompted explicitly during init.
-  --agent-path                      Shared agent path. Prompted explicitly during init.
-  --global-skills-path              Shared global skills path. Prompted explicitly during init.
-  --project-context-path            Local project-context path. Prompted explicitly during init.
-  --project-coding-standards-path   Local project coding standards path. Prompted explicitly during init.
-  --project-skills-path             Local project skills path. Prompted explicitly during init.
+  --kb-path                         Shared knowledge-base path. Prompted explicitly during init if not provided.
+  --agent-path                      Shared agent path. Prompted explicitly during init if not provided.
+  --skills-path                     Shared skills path. Prompted explicitly during init if not provided.
   --tool                            Delivery adapter target. Only codex is supported in v1.
   -h, --help                        Show help.`;
 
@@ -142,7 +139,7 @@ export function resolveExecutionOptions(
   }
 
   if (parsed.command === "build") {
-    rejectUnsupportedOptions(parsed.options, ["--tool"]);
+    rejectUnsupportedOptions(parsed.options, ["--tool", "--project-path"]);
 
     const tool = parsed.options["--tool"];
     if (!tool) {
@@ -163,10 +160,7 @@ export function resolveExecutionOptions(
     "--project-path",
     "--kb-path",
     "--agent-path",
-    "--global-skills-path",
-    "--project-context-path",
-    "--project-coding-standards-path",
-    "--project-skills-path",
+    "--skills-path",
   ]);
 
   const detectedDefaults = detectInitDefaults(projectPath);
@@ -176,23 +170,11 @@ export function resolveExecutionOptions(
     defaults: {
       ...detectedDefaults,
       agentPath: coalesceOption(parsed.options["--agent-path"], detectedDefaults.agentPath),
-      globalSkillsPath: coalesceOption(
-        parsed.options["--global-skills-path"],
-        detectedDefaults.globalSkillsPath,
+      skillsPath: coalesceOption(
+        parsed.options["--skills-path"],
+        detectedDefaults.skillsPath,
       ),
       kbPath: coalesceOption(parsed.options["--kb-path"], detectedDefaults.kbPath),
-      projectCodingStandardsPath: coalesceOption(
-        parsed.options["--project-coding-standards-path"],
-        detectedDefaults.projectCodingStandardsPath,
-      ),
-      projectContextPath: coalesceOption(
-        parsed.options["--project-context-path"],
-        detectedDefaults.projectContextPath,
-      ),
-      projectSkillsPath: coalesceOption(
-        parsed.options["--project-skills-path"],
-        detectedDefaults.projectSkillsPath,
-      ),
     },
     projectPath,
   };
@@ -249,6 +231,10 @@ export async function buildProject(options: BuildExecutionOptions): Promise<void
   for (const file of adapterOutput.files) {
     await writeText(path.join(options.projectPath, file.path), file.contents);
   }
+
+  output.write(
+    `\nBuild complete. Generated .aie-os/build/effective-context.json, .aie-os/build/effective-context.md, and ${adapterOutput.primaryArtifact}.\n`,
+  );
 }
 
 function detectInitDefaults(projectPath: string): InitPromptDefaults {
@@ -258,14 +244,11 @@ function detectInitDefaults(projectPath: string): InitPromptDefaults {
   return {
     kbPath: detectSharedDefault(projectPath, path.join(localAieOsPath, "knowledge-base"), path.join(bundledRoot, "knowledge-base")),
     agentPath: detectSharedDefault(projectPath, path.join(localAieOsPath, "agent"), path.join(bundledRoot, "agent")),
-    globalSkillsPath: detectOptionalSharedDefault(
+    skillsPath: detectOptionalSharedDefault(
       projectPath,
-      path.join(localAieOsPath, "skills", "global"),
-      path.join(bundledRoot, "skills", "global"),
+      path.join(localAieOsPath, "skills"),
+      path.join(bundledRoot, "skills"),
     ),
-    projectContextPath: `${PROJECT_AIE_DIRECTORY}/project-context`,
-    projectCodingStandardsPath: `${PROJECT_AIE_DIRECTORY}/project-coding-standards`,
-    projectSkillsPath: `${PROJECT_AIE_DIRECTORY}/project-skills`,
   };
 }
 
@@ -274,7 +257,7 @@ function detectSharedDefault(projectPath: string, preferredPath: string, fallbac
     return toProjectRelative(projectPath, preferredPath);
   }
 
-  return fallbackPath;
+  return toProjectRelative(projectPath, fallbackPath);
 }
 
 function detectOptionalSharedDefault(
@@ -287,7 +270,7 @@ function detectOptionalSharedDefault(
   }
 
   if (pathExists(fallbackPath)) {
-    return fallbackPath;
+    return toProjectRelative(projectPath, fallbackPath);
   }
 
   return "";
@@ -308,56 +291,35 @@ async function collectManifest(
 ): Promise<Manifest> {
   const knowledgeBasePath = await promptPath(reader, {
     defaultValue: defaults.kbPath,
-    explanation:
-      "Shared engineering knowledge. AIE OS reads engineering principles and coding standards from this folder.",
-    label: "Knowledge base path",
+    description:
+      "AIE OS reads shared engineering principles and coding standards from this folder.",
+    promptLabel: "knowledge base path",
+    optionName: "--kb-path",
     projectPath,
   });
   await ensureDirectoryType(resolveAgainstProject(projectPath, knowledgeBasePath), "Knowledge base path");
 
   const agentPath = await promptPath(reader, {
     defaultValue: defaults.agentPath,
-    explanation:
-      "Shared agent configuration. AIE OS reads persona and style definitions from this folder.",
-    label: "Agent path",
+    description:
+      "AIE OS reads persona and style definitions from this folder.",
+    promptLabel: "agent path",
+    optionName: "--agent-path",
     projectPath,
   });
   await ensureDirectoryType(resolveAgainstProject(projectPath, agentPath), "Agent path");
 
-  const globalSkillsPath = await promptOptionalPath(reader, {
-    defaultValue: defaults.globalSkillsPath,
-    explanation:
-      "Optional shared workflow guidance. Leave disabled if there are no global skills yet.",
-    label: "Global skills path",
+  const skillsPath = await promptOptionalPath(reader, {
+    defaultValue: defaults.skillsPath,
+    description:
+      "AIE OS reads shared skills from this folder. Type none to disable shared skills.",
+    promptLabel: "skills path",
+    optionName: "--skills-path",
     projectPath,
   });
-  if (globalSkillsPath.trim() !== "") {
-    await ensureDirectoryType(resolveAgainstProject(projectPath, globalSkillsPath), "Global skills path");
+  if (skillsPath.trim() !== "") {
+    await ensureDirectoryType(resolveAgainstProject(projectPath, skillsPath), "Skills path");
   }
-
-  const projectContextPath = await promptPath(reader, {
-    defaultValue: defaults.projectContextPath,
-    explanation:
-      "Local project context files. This is where repository-specific context will live.",
-    label: "Project context path",
-    projectPath,
-  });
-
-  const projectCodingStandardsPath = await promptPath(reader, {
-    defaultValue: defaults.projectCodingStandardsPath,
-    explanation:
-      "Local coding standards. Use this folder for project-specific standards that refine shared ones.",
-    label: "Project coding standards path",
-    projectPath,
-  });
-
-  const projectSkillsPath = await promptPath(reader, {
-    defaultValue: defaults.projectSkillsPath,
-    explanation:
-      "Local project skills. Drop project-specific workflow guidance here later.",
-    label: "Project skills path",
-    projectPath,
-  });
 
   const selections = await collectSelections(projectPath, {
     agentPath,
@@ -368,11 +330,11 @@ async function collectManifest(
     version: 2,
     paths: {
       agent: agentPath,
-      globalSkills: globalSkillsPath,
+      skills: skillsPath,
       knowledgeBase: knowledgeBasePath,
-      projectCodingStandards: projectCodingStandardsPath,
-      projectContext: projectContextPath,
-      projectSkills: projectSkillsPath,
+      projectCodingStandards: path.join(PROJECT_AIE_DIRECTORY, PROJECT_CODING_STANDARDS_DIRECTORY),
+      projectContext: path.join(PROJECT_AIE_DIRECTORY, PROJECT_CONTEXT_DIRECTORY),
+      projectSkills: path.join(PROJECT_AIE_DIRECTORY, PROJECT_SKILLS_DIRECTORY),
     },
     selection: selections,
   };
@@ -419,21 +381,24 @@ async function collectSelections(
     options: styleOptions,
   });
 
-  const language = await promptSelect(reader, {
-    defaultValue: languageOptions.length === 1 ? languageOptions[0] : null,
-    explanation: "Language selects the language-specific coding standards.",
-    label: "Language",
+  const languages = await promptMultiSelect(reader, {
+    allowNone: false,
+    defaultValue: languageOptions.length === 1 ? [languageOptions[0]] : [],
+    explanation:
+      "Select one or more languages. Use comma-separated numbers or names. This supports monorepos.",
+    label: "Languages",
     options: languageOptions,
   });
 
   const applicationType = await promptSelect(reader, {
-    defaultValue: applicationTypeOptions.length === 1 ? applicationTypeOptions[0] : null,
-    explanation: "Application type selects the standards for the shape of the application, such as api or mobile.",
+    defaultValue: "none",
+    explanation: "Application type selects standards for the shape of the application, such as api or mobile. Choose none when not needed.",
     label: "Application type",
-    options: applicationTypeOptions,
+    options: ["none", ...applicationTypeOptions],
   });
 
   const frameworks = await promptMultiSelect(reader, {
+    allowNone: true,
     defaultValue: [],
     explanation: "Framework overlays add framework-specific coding standards. Choose none when not needed.",
     label: "Frameworks",
@@ -443,7 +408,7 @@ async function collectSelections(
   return {
     applicationType,
     frameworks,
-    language,
+    languages,
     persona,
     style,
   };
@@ -465,16 +430,8 @@ async function scaffoldProject(projectPath: string, manifest: Manifest): Promise
   await ensureDirectory(projectSkillsPath);
 
   await writeTemplateIfMissing(
-    path.join(projectContextPath, "overview.md"),
-    PROJECT_CONTEXT_OVERVIEW,
-  );
-  await writeTemplateIfMissing(
-    path.join(projectContextPath, "architecture.md"),
-    PROJECT_CONTEXT_ARCHITECTURE,
-  );
-  await writeTemplateIfMissing(
-    path.join(projectContextPath, "conventions.md"),
-    PROJECT_CONTEXT_CONVENTIONS,
+    path.join(projectContextPath, "README.md"),
+    PROJECT_CONTEXT_README,
   );
   await writeTemplateIfMissing(
     path.join(projectCodingStandardsPath, "README.md"),
@@ -486,6 +443,13 @@ async function scaffoldProject(projectPath: string, manifest: Manifest): Promise
   );
 
   await saveManifest(manifest, path.join(aieDirectory, MANIFEST_NAME));
+  output.write(`
++------------------+
+|  AIE OS READY    |
++------------------+
+
+AIE OS project created at ${path.join(projectPath, PROJECT_AIE_DIRECTORY)}.
+`);
 }
 
 async function writeTemplateIfMissing(
@@ -503,15 +467,17 @@ async function promptPath(
   reader: readline.Interface,
   input: {
     defaultValue: string;
-    explanation: string;
-    label: string;
+    description: string;
+    promptLabel: string;
+    optionName: string;
     projectPath: string;
   },
 ): Promise<string> {
   const value = await promptText(reader, {
     defaultValue: input.defaultValue,
-    explanation: input.explanation,
-    label: input.label,
+    description: input.description,
+    promptLabel: input.promptLabel,
+    optionName: input.optionName,
   });
 
   return normalizeConfiguredPath(input.projectPath, value);
@@ -521,13 +487,16 @@ async function promptOptionalPath(
   reader: readline.Interface,
   input: {
     defaultValue: string;
-    explanation: string;
-    label: string;
+    description: string;
+    promptLabel: string;
+    optionName: string;
     projectPath: string;
   },
 ): Promise<string> {
-  output.write(`\n${input.label}\n${input.explanation}\n`);
-  output.write(`Default: ${input.defaultValue || "disabled"}\n`);
+  output.write(`\nProvide ${input.promptLabel}, or press Enter to accept default.\n`);
+  output.write(`${input.description}\n`);
+  output.write(`option: ${input.optionName}\n`);
+  output.write(`default: ${input.defaultValue || "disabled"}\n`);
   const answer = (await reader.question("Enter a path, press Enter to accept the default, or type none to disable: ")).trim();
 
   if (answer === "") {
@@ -582,6 +551,7 @@ async function promptSelect(
 async function promptMultiSelect(
   reader: readline.Interface,
   input: {
+    allowNone: boolean;
     defaultValue: string[];
     explanation: string;
     label: string;
@@ -596,7 +566,7 @@ async function promptMultiSelect(
   input.options.forEach((option, index) => {
     output.write(`${index + 1}) ${option}\n`);
   });
-  output.write("Default: none\n");
+  output.write(`Default: ${input.defaultValue.length === 0 ? "none" : input.defaultValue.join(", ")}\n`);
 
   while (true) {
     const answer = (await reader.question(
@@ -604,7 +574,16 @@ async function promptMultiSelect(
     )).trim();
 
     if (answer === "" || answer.toLowerCase() === "none") {
-      return input.defaultValue;
+      if (input.defaultValue.length > 0) {
+        return input.defaultValue;
+      }
+
+      if (input.allowNone) {
+        return [];
+      }
+
+      output.write("Select at least one option.\n");
+      continue;
     }
 
     const selections = answer
@@ -625,12 +604,15 @@ async function promptText(
   reader: readline.Interface,
   input: {
     defaultValue: string;
-    explanation: string;
-    label: string;
+    description: string;
+    promptLabel: string;
+    optionName: string;
   },
 ): Promise<string> {
-  output.write(`\n${input.label}\n${input.explanation}\n`);
-  output.write(`Default: ${input.defaultValue}\n`);
+  output.write(`\nProvide ${input.promptLabel}, or press Enter to accept default.\n`);
+  output.write(`${input.description}\n`);
+  output.write(`option: ${input.optionName}\n`);
+  output.write(`default: ${input.defaultValue}\n`);
   const answer = (await reader.question("Press Enter to accept the default or enter a value: ")).trim();
 
   return answer === "" ? input.defaultValue : answer;
@@ -719,62 +701,24 @@ async function ensureDirectoryType(
   }
 }
 
-const PROJECT_CONTEXT_OVERVIEW = `# Overview
+const PROJECT_CONTEXT_README = `# Project Context
 
-## Purpose
-
-Describe the product and domain context the agent needs for this repository.
-
-## Facts
-
-- Product or domain:
-- Primary users:
-- Critical workflows:
-
-## Constraints
-
-- Business constraints:
-- Compliance or security constraints:
-- Operational constraints:
-`;
-
-const PROJECT_CONTEXT_ARCHITECTURE = `# Architecture
-
-## Purpose
-
-Describe the current architecture and module boundaries that the agent should
-respect.
-
-## Overview
-
-- Primary stack:
-- Runtime environments:
-- Deployment model:
-
-## Boundaries
-
-- Main modules:
-- Ownership boundaries:
-- External integrations:
-`;
-
-const PROJECT_CONTEXT_CONVENTIONS = `# Conventions
-
-## Purpose
-
-Capture repository-specific conventions that refine shared standards.
-
-## Rules
-
-- Add repository-specific rules here.
+Add repository-specific context files here, for example:
+- product-domain.md
+- architecture.md
+- conventions.md
 `;
 
 const PROJECT_CODING_STANDARDS_README = `# Project Coding Standards
 
-Add project-specific coding standards here to refine shared standards.
+Add project-specific coding standard files here, for example:
+- api.md
+- persistence.md
 `;
 
 const PROJECT_SKILLS_README = `# Project Skills
 
-Add project-specific skills here.
+Add project-specific skill files here, for example:
+- create-endpoint.md
+- release-process.md
 `;

@@ -26,7 +26,7 @@ export async function buildAgentContext(input: BuildInput): Promise<BuildOutput>
 
   return {
     effectiveContext,
-    effectiveContextMarkdown: renderEffectiveContextMarkdown({
+    effectiveContextMarkdown: await renderEffectiveContextMarkdown({
       effectiveContext,
       title: "# Agent Context",
       tool: input.tool,
@@ -41,9 +41,9 @@ async function resolveSections(input: BuildInput): Promise<EffectiveContextSecti
   const projectPath = input.projectPath;
   const knowledgeBasePath = resolveProjectPath(projectPath, input.manifest.paths.knowledgeBase);
   const agentPath = resolveProjectPath(projectPath, input.manifest.paths.agent);
-  const globalSkillsPath = resolveOptionalProjectPath(
+  const skillsPath = resolveOptionalProjectPath(
     projectPath,
-    input.manifest.paths.globalSkills,
+    input.manifest.paths.skills,
   );
   const projectContextPath = resolveProjectPath(projectPath, input.manifest.paths.projectContext);
   const projectCodingStandardsPath = resolveProjectPath(
@@ -84,26 +84,30 @@ async function resolveSections(input: BuildInput): Promise<EffectiveContextSecti
     )),
   );
 
-  sections.push(
-    ...(await loadDirectorySections(
-      path.join(knowledgeBasePath, "coding-standards", "language", input.manifest.selection.language),
-      projectPath,
-      "Language Standards",
-    )),
-  );
+  for (const language of input.manifest.selection.languages) {
+    sections.push(
+      ...(await loadDirectorySections(
+        path.join(knowledgeBasePath, "coding-standards", "language", language),
+        projectPath,
+        "Language Standards",
+      )),
+    );
+  }
 
-  sections.push(
-    ...(await loadDirectorySections(
-      path.join(
-        knowledgeBasePath,
-        "coding-standards",
-        "application-type",
-        input.manifest.selection.applicationType,
-      ),
-      projectPath,
-      "Application-Type Standards",
-    )),
-  );
+  if (input.manifest.selection.applicationType !== "none") {
+    sections.push(
+      ...(await loadDirectorySections(
+        path.join(
+          knowledgeBasePath,
+          "coding-standards",
+          "application-type",
+          input.manifest.selection.applicationType,
+        ),
+        projectPath,
+        "Application-Type Standards",
+      )),
+    );
+  }
 
   for (const framework of input.manifest.selection.frameworks) {
     sections.push(
@@ -123,12 +127,12 @@ async function resolveSections(input: BuildInput): Promise<EffectiveContextSecti
     )),
   );
 
-  if (globalSkillsPath) {
+  if (skillsPath) {
     sections.push(
       ...(await loadDirectorySections(
-        globalSkillsPath,
+        skillsPath,
         projectPath,
-        "Global Skills",
+        "Skills",
       )),
     );
   }
@@ -163,7 +167,7 @@ async function loadDirectorySections(
 
   return Promise.all(
     files.map(async (filePath) => ({
-      body: await readText(filePath),
+      file: filePath,
       heading: path.basename(filePath, ".md"),
       layer,
       source: path.relative(projectPath, filePath),
@@ -178,7 +182,7 @@ async function loadSingleFileSection(
   layer: string,
 ): Promise<EffectiveContextSection> {
   return {
-    body: await readText(filePath),
+    file: filePath,
     heading,
     layer,
     source: path.relative(projectPath, filePath),
@@ -204,38 +208,39 @@ function resolveOptionalProjectPath(
   return resolveProjectPath(projectPath, configuredPath);
 }
 
-export function renderEffectiveContextMarkdown(input: {
+export async function renderEffectiveContextMarkdown(input: {
   effectiveContext: EffectiveContext;
   note?: string;
   title: string;
   tool: "codex";
-}): string {
+}): Promise<string> {
   const buildInputs = [
     `- Tool: ${input.tool}`,
     `- Persona: ${input.effectiveContext.manifest.selection.persona}`,
     `- Style: ${input.effectiveContext.manifest.selection.style}`,
-    `- Language: ${input.effectiveContext.manifest.selection.language}`,
-    `- Application type: ${input.effectiveContext.manifest.selection.applicationType}`,
+    `- Languages: ${formatList(input.effectiveContext.manifest.selection.languages)}`,
+    `- Application type: ${formatValue(input.effectiveContext.manifest.selection.applicationType)}`,
     `- Frameworks: ${formatList(input.effectiveContext.manifest.selection.frameworks)}`,
     `- Knowledge base path: ${input.effectiveContext.manifest.paths.knowledgeBase}`,
     `- Agent path: ${input.effectiveContext.manifest.paths.agent}`,
-    `- Global skills path: ${formatValue(input.effectiveContext.manifest.paths.globalSkills)}`,
+    `- Skills path: ${formatValue(input.effectiveContext.manifest.paths.skills)}`,
     `- Project context path: ${input.effectiveContext.manifest.paths.projectContext}`,
     `- Project coding standards path: ${input.effectiveContext.manifest.paths.projectCodingStandards}`,
     `- Project skills path: ${input.effectiveContext.manifest.paths.projectSkills}`,
   ].join("\n");
 
   const renderedSections = input.effectiveContext.sections
-    .map((section, index) =>
+    .map(async (section, index) =>
       [
         `## ${index + 1}. ${section.layer}: ${section.heading}`,
         "",
         `Source: \`${section.source}\``,
         "",
-        section.body.trim(),
+        (await readText(section.file)).trim(),
       ].join("\n"),
-    )
-    .join("\n\n");
+    );
+
+  const resolvedSections = await Promise.all(renderedSections);
 
   return [
     input.title,
@@ -248,7 +253,7 @@ export function renderEffectiveContextMarkdown(input: {
     "",
     buildInputs,
     "",
-    renderedSections,
+    resolvedSections.join("\n\n"),
     "",
   ].join("\n");
 }

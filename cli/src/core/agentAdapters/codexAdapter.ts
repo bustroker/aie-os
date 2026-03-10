@@ -1,14 +1,13 @@
-import { renderEffectiveContextMarkdown } from "../build";
 import type { Adapter, AdapterOutput } from "./types";
 
 export const codexAdapter: Adapter = {
   build(input): AdapterOutput {
-    const contents = renderEffectiveContextMarkdown({
-      effectiveContext: input.effectiveContext,
-      note: "Canonical source: `.aie-os/build/effective-context.md`.",
-      title: "# AGENTS",
-      tool: "codex",
-    });
+    const contents = input.effectiveContextMarkdown
+      .replace("# Agent Context", "# AGENTS")
+      .replace(
+        "## Build Inputs",
+        "Canonical source: `.aie-os/build/effective-context.md`.\n\n## Build Inputs",
+      );
 
     return {
       files: [

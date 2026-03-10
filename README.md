@@ -20,13 +20,12 @@ aie-os/
     style/
     persona/
   skills/
-    global/
   cli/
 ```
 
 - `knowledge-base/` holds shared engineering principles and coding standards.
 - `agent/` holds shared style and persona definitions.
-- `skills/` holds shared global skills.
+- `skills/` holds shared skills.
 - `cli/` sets up a project and builds agent-specific artifacts.
 
 ## Target Project
@@ -59,8 +58,14 @@ bash aie-os/cli/init-aie-os.sh
 bash aie-os/cli/build-agent-context.sh --tool codex
 ```
 
+- `bash aie-os/cli/init-aie-os.sh [--project-path /path/to/project] [--kb-path /path/to/knowledge-base] [--agent-path /path/to/agent] [--skills-path /path/to/skills]`
+  (`--project-path` defaults to current directory; `--kb-path`, `--agent-path`, and `--skills-path` are prompted if not provided)
+- `bash aie-os/cli/build-agent-context.sh --tool codex [--project-path /path/to/project]`
+  (`--project-path` defaults to current directory)
+
 - `init-aie-os.sh` prompts for every parameter, creates the `.aie-os/` folder
-  structure, and writes `.aie-os/aie-os.json`.
+  structure with `README.md` placeholders only, and writes `.aie-os/aie-os.json`.
+- `application type` supports `none` and defaults to `none`.
 - `build-agent-context.sh --tool codex` reads `.aie-os/aie-os.json`, generates
   `.aie-os/build/effective-context.json` and `.aie-os/build/effective-context.md`,
   then passes the canonical context into the selected adapter.

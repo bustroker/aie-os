@@ -1,7 +1,7 @@
 import type { Manifest } from "../manifest";
 
 export type EffectiveContextSection = {
-  body: string;
+  file: string;
   heading: string;
   layer: string;
   source: string;

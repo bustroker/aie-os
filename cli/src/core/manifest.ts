@@ -3,7 +3,7 @@ import { readText, writeText } from "./files";
 export type Manifest = {
   paths: {
     agent: string;
-    globalSkills: string;
+    skills: string;
     knowledgeBase: string;
     projectCodingStandards: string;
     projectContext: string;
@@ -12,7 +12,7 @@ export type Manifest = {
   selection: {
     applicationType: string;
     frameworks: string[];
-    language: string;
+    languages: string[];
     persona: string;
     style: string;
   };
@@ -52,7 +52,7 @@ function normalizeManifest(rawManifest: unknown, manifestPath: string): Manifest
     paths: {
       knowledgeBase: expectString(paths.knowledgeBase, "paths.knowledgeBase", manifestPath),
       agent: expectString(paths.agent, "paths.agent", manifestPath),
-      globalSkills: expectString(paths.globalSkills, "paths.globalSkills", manifestPath),
+      skills: expectString(paths.skills, "paths.skills", manifestPath),
       projectContext: expectString(paths.projectContext, "paths.projectContext", manifestPath),
       projectCodingStandards: expectString(
         paths.projectCodingStandards,
@@ -64,7 +64,11 @@ function normalizeManifest(rawManifest: unknown, manifestPath: string): Manifest
     selection: {
       persona: expectString(selection.persona, "selection.persona", manifestPath),
       style: expectString(selection.style, "selection.style", manifestPath),
-      language: expectString(selection.language, "selection.language", manifestPath),
+      languages: expectStringArray(
+        selection.languages,
+        "selection.languages",
+        manifestPath,
+      ),
       applicationType: expectString(
         selection.applicationType,
         "selection.applicationType",

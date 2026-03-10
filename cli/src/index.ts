@@ -7,7 +7,7 @@ import {
   parseCommandInput,
   resolveExecutionOptions,
   usageText,
-} from "./main";
+} from "./cli";
 
 async function run(): Promise<void> {
   const commandInput = parseCommandInput(process.argv.slice(2));

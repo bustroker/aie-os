@@ -31,11 +31,14 @@ bash aie-os/cli/build-agent-context.sh --tool codex
 ## Commands
 
 ```bash
-bash aie-os/cli/init-aie-os.sh
-bash aie-os/cli/build-agent-context.sh --tool codex
+bash aie-os/cli/init-aie-os.sh [--project-path /path/to/project] [--kb-path /path/to/knowledge-base] [--agent-path /path/to/agent] [--skills-path /path/to/skills]
+bash aie-os/cli/build-agent-context.sh --tool codex [--project-path /path/to/project]
 ```
 
-- `init-aie-os.sh` prompts for every parameter and writes `.aie-os/aie-os.json`.
+- `init-aie-os.sh` prompts for every parameter, writes `.aie-os/aie-os.json`,
+  and creates `.aie-os/project-context/`, `.aie-os/project-coding-standards/`,
+  and `.aie-os/project-skills/` with `README.md` placeholders only.
+- `application type` supports `none` and defaults to `none`.
 - `build-agent-context.sh --tool codex` reads `.aie-os/aie-os.json`,
   generates canonical context files under `.aie-os/build/`, and passes the
   result into the selected adapter.
