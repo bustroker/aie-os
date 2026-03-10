@@ -54,7 +54,6 @@ type InitSelections = {
 const PROJECT_AIE_DIRECTORY = ".aie-os";
 const BUILD_DIRECTORY = "build";
 const MANIFEST_NAME = "aie-os.json";
-const PROJECT_CONTEXT_DIRECTORY = "project-context";
 const PROJECT_CODING_STANDARDS_DIRECTORY = "project-coding-standards";
 const PROJECT_SKILLS_DIRECTORY = "project-skills";
 const TOOL_NAME = "codex";
@@ -327,13 +326,12 @@ async function collectManifest(
   }, reader);
 
   return {
-    version: 2,
+    version: "0.1",
     paths: {
       agent: agentPath,
       skills: skillsPath,
       knowledgeBase: knowledgeBasePath,
       projectCodingStandards: path.join(PROJECT_AIE_DIRECTORY, PROJECT_CODING_STANDARDS_DIRECTORY),
-      projectContext: path.join(PROJECT_AIE_DIRECTORY, PROJECT_CONTEXT_DIRECTORY),
       projectSkills: path.join(PROJECT_AIE_DIRECTORY, PROJECT_SKILLS_DIRECTORY),
     },
     selection: selections,
@@ -392,7 +390,7 @@ async function collectSelections(
 
   const applicationType = await promptSelect(reader, {
     defaultValue: "none",
-    explanation: "Application type selects standards for the shape of the application, such as api or mobile. Choose none when not needed.",
+    explanation: "Application type selects standards for the shape of the application, such as api or mobile.",
     label: "Application type",
     options: ["none", ...applicationTypeOptions],
   });
@@ -418,21 +416,14 @@ async function scaffoldProject(projectPath: string, manifest: Manifest): Promise
   const aieDirectory = path.join(projectPath, PROJECT_AIE_DIRECTORY);
   await ensureDirectory(aieDirectory);
 
-  const projectContextPath = resolveAgainstProject(projectPath, manifest.paths.projectContext);
   const projectCodingStandardsPath = resolveAgainstProject(
     projectPath,
     manifest.paths.projectCodingStandards,
   );
   const projectSkillsPath = resolveAgainstProject(projectPath, manifest.paths.projectSkills);
 
-  await ensureDirectory(projectContextPath);
   await ensureDirectory(projectCodingStandardsPath);
   await ensureDirectory(projectSkillsPath);
-
-  await writeTemplateIfMissing(
-    path.join(projectContextPath, "README.md"),
-    PROJECT_CONTEXT_README,
-  );
   await writeTemplateIfMissing(
     path.join(projectCodingStandardsPath, "README.md"),
     PROJECT_CODING_STANDARDS_README,
@@ -444,9 +435,23 @@ async function scaffoldProject(projectPath: string, manifest: Manifest): Promise
 
   await saveManifest(manifest, path.join(aieDirectory, MANIFEST_NAME));
   output.write(`
-+------------------+
-|  AIE OS READY    |
-+------------------+
+              .-"""-.
+             / .===. \\
+             \\/ 6 6 \\/
+             ( \\___/ )
+        ___ooo__V__ooo___
+       /                 \\
+      |   [  AIE-OS  ]   |
+       \\_________________/
+
+     AIE-OS PROJECT HAS BEEN INITIALIZED
+
+           *      .      *      .
+        .     *     .      *      *
+          *      \\  |  /      .
+        .      --- * ---       *
+          *      /  |  \\     .
+        .    *      .      *     .
 
 AIE OS project created at ${path.join(projectPath, PROJECT_AIE_DIRECTORY)}.
 `);
@@ -700,14 +705,6 @@ async function ensureDirectoryType(
     throw new Error(`${label} is not a directory: ${directoryPath}`);
   }
 }
-
-const PROJECT_CONTEXT_README = `# Project Context
-
-Add repository-specific context files here, for example:
-- product-domain.md
-- architecture.md
-- conventions.md
-`;
 
 const PROJECT_CODING_STANDARDS_README = `# Project Coding Standards
 

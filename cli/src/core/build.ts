@@ -21,13 +21,14 @@ export async function buildAgentContext(input: BuildInput): Promise<BuildOutput>
   const effectiveContext: EffectiveContext = {
     manifest: input.manifest,
     sections,
-    version: 1,
+    version: "0.1",
   };
 
   return {
     effectiveContext,
     effectiveContextMarkdown: await renderEffectiveContextMarkdown({
       effectiveContext,
+      projectPath: input.projectPath,
       title: "# Agent Context",
       tool: input.tool,
     }),
@@ -45,7 +46,6 @@ async function resolveSections(input: BuildInput): Promise<EffectiveContextSecti
     projectPath,
     input.manifest.paths.skills,
   );
-  const projectContextPath = resolveProjectPath(projectPath, input.manifest.paths.projectContext);
   const projectCodingStandardsPath = resolveProjectPath(
     projectPath,
     input.manifest.paths.projectCodingStandards,
@@ -54,25 +54,9 @@ async function resolveSections(input: BuildInput): Promise<EffectiveContextSecti
 
   sections.push(
     ...(await loadDirectorySections(
-      projectContextPath,
-      projectPath,
-      "Project Context",
-    )),
-  );
-
-  sections.push(
-    ...(await loadDirectorySections(
       path.join(knowledgeBasePath, "engineering-principles", "universal"),
       projectPath,
       "Engineering Principles",
-    )),
-  );
-
-  sections.push(
-    ...(await loadDirectorySections(
-      projectCodingStandardsPath,
-      projectPath,
-      "Project Coding Standards",
     )),
   );
 
@@ -119,14 +103,6 @@ async function resolveSections(input: BuildInput): Promise<EffectiveContextSecti
     );
   }
 
-  sections.push(
-    ...(await loadDirectorySections(
-      projectSkillsPath,
-      projectPath,
-      "Project Skills",
-    )),
-  );
-
   if (skillsPath) {
     sections.push(
       ...(await loadDirectorySections(
@@ -136,6 +112,22 @@ async function resolveSections(input: BuildInput): Promise<EffectiveContextSecti
       )),
     );
   }
+
+  sections.push(
+    ...(await loadDirectorySections(
+      projectCodingStandardsPath,
+      projectPath,
+      "Project Coding Standards",
+    )),
+  );
+
+  sections.push(
+    ...(await loadDirectorySections(
+      projectSkillsPath,
+      projectPath,
+      "Project Skills",
+    )),
+  );
 
   sections.push(
     await loadSingleFileSection(
@@ -167,7 +159,7 @@ async function loadDirectorySections(
 
   return Promise.all(
     files.map(async (filePath) => ({
-      file: filePath,
+      file: toOutputFileReference(projectPath, filePath),
       heading: path.basename(filePath, ".md"),
       layer,
       source: path.relative(projectPath, filePath),
@@ -182,7 +174,7 @@ async function loadSingleFileSection(
   layer: string,
 ): Promise<EffectiveContextSection> {
   return {
-    file: filePath,
+    file: toOutputFileReference(projectPath, filePath),
     heading,
     layer,
     source: path.relative(projectPath, filePath),
@@ -211,6 +203,7 @@ function resolveOptionalProjectPath(
 export async function renderEffectiveContextMarkdown(input: {
   effectiveContext: EffectiveContext;
   note?: string;
+  projectPath: string;
   title: string;
   tool: "codex";
 }): Promise<string> {
@@ -224,7 +217,6 @@ export async function renderEffectiveContextMarkdown(input: {
     `- Knowledge base path: ${input.effectiveContext.manifest.paths.knowledgeBase}`,
     `- Agent path: ${input.effectiveContext.manifest.paths.agent}`,
     `- Skills path: ${formatValue(input.effectiveContext.manifest.paths.skills)}`,
-    `- Project context path: ${input.effectiveContext.manifest.paths.projectContext}`,
     `- Project coding standards path: ${input.effectiveContext.manifest.paths.projectCodingStandards}`,
     `- Project skills path: ${input.effectiveContext.manifest.paths.projectSkills}`,
   ].join("\n");
@@ -236,7 +228,7 @@ export async function renderEffectiveContextMarkdown(input: {
         "",
         `Source: \`${section.source}\``,
         "",
-        (await readText(section.file)).trim(),
+        (await readText(resolveSectionFilePath(input.projectPath, section.file))).trim(),
       ].join("\n"),
     );
 
@@ -268,4 +260,22 @@ function formatList(items: string[]): string {
 
 function formatValue(value: string): string {
   return value.trim() === "" ? "none" : value;
+}
+
+function toOutputFileReference(projectPath: string, filePath: string): string {
+  const relativePath = path.relative(projectPath, filePath);
+
+  if (relativePath === ".aie-os" || relativePath.startsWith(`.aie-os${path.sep}`)) {
+    return relativePath;
+  }
+
+  return filePath;
+}
+
+function resolveSectionFilePath(projectPath: string, fileReference: string): string {
+  if (path.isAbsolute(fileReference)) {
+    return fileReference;
+  }
+
+  return path.resolve(projectPath, fileReference);
 }

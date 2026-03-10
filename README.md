@@ -35,7 +35,6 @@ xample-app/
   aie-os/
   .aie-os/
     aie-os.json
-    project-context/
     project-coding-standards/
     project-skills/
     build/
@@ -58,14 +57,17 @@ bash aie-os/cli/init-aie-os.sh
 bash aie-os/cli/build-agent-context.sh --tool codex
 ```
 
-- `bash aie-os/cli/init-aie-os.sh [--project-path /path/to/project] [--kb-path /path/to/knowledge-base] [--agent-path /path/to/agent] [--skills-path /path/to/skills]`
-  (`--project-path` defaults to current directory; `--kb-path`, `--agent-path`, and `--skills-path` are prompted if not provided)
+command `bash aie-os/cli/init-aie-os.sh` takes optional arguments:
+  * `--project-path /path/to/project` defaults to current directory;
+  * `--kb-path /path/to/knowledge-base` prompted if not provided;
+  * `--agent-path /path/to/agent` prompted if not provided;
+  * `--skills-path /path/to/skills` prompted if not provided.
 - `bash aie-os/cli/build-agent-context.sh --tool codex [--project-path /path/to/project]`
   (`--project-path` defaults to current directory)
 
 - `init-aie-os.sh` prompts for every parameter, creates the `.aie-os/` folder
   structure with `README.md` placeholders only, and writes `.aie-os/aie-os.json`.
-- `application type` supports `none` and defaults to `none`.
+- `application type` supports none implicitly and defaults to none.
 - `build-agent-context.sh --tool codex` reads `.aie-os/aie-os.json`, generates
   `.aie-os/build/effective-context.json` and `.aie-os/build/effective-context.md`,
   then passes the canonical context into the selected adapter.

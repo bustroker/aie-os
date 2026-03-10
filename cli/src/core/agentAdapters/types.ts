@@ -10,7 +10,7 @@ export type EffectiveContextSection = {
 export type EffectiveContext = {
   manifest: Manifest;
   sections: EffectiveContextSection[];
-  version: number;
+  version: string;
 };
 
 export type AdapterInput = {

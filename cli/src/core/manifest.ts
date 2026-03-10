@@ -6,7 +6,6 @@ export type Manifest = {
     skills: string;
     knowledgeBase: string;
     projectCodingStandards: string;
-    projectContext: string;
     projectSkills: string;
   };
   selection: {
@@ -16,7 +15,7 @@ export type Manifest = {
     persona: string;
     style: string;
   };
-  version: number;
+  version: string;
 };
 
 export async function loadManifest(manifestPath: string): Promise<Manifest> {
@@ -48,12 +47,11 @@ function normalizeManifest(rawManifest: unknown, manifestPath: string): Manifest
   const selection = expectRecord(manifest.selection, "selection", manifestPath);
 
   return {
-    version: expectNumber(manifest.version, "version", manifestPath),
+    version: expectString(manifest.version, "version", manifestPath),
     paths: {
       knowledgeBase: expectString(paths.knowledgeBase, "paths.knowledgeBase", manifestPath),
       agent: expectString(paths.agent, "paths.agent", manifestPath),
       skills: expectString(paths.skills, "paths.skills", manifestPath),
-      projectContext: expectString(paths.projectContext, "paths.projectContext", manifestPath),
       projectCodingStandards: expectString(
         paths.projectCodingStandards,
         "paths.projectCodingStandards",
@@ -114,18 +112,6 @@ function expectStringArray(
 ): string[] {
   if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) {
     throw new Error(`Expected ${fieldName} to be a string array in manifest: ${manifestPath}`);
-  }
-
-  return value;
-}
-
-function expectNumber(
-  value: unknown,
-  fieldName: string,
-  manifestPath: string,
-): number {
-  if (typeof value !== "number" || Number.isNaN(value)) {
-    throw new Error(`Expected ${fieldName} to be a number in manifest: ${manifestPath}`);
   }
 
   return value;
