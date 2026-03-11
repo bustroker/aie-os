@@ -3,7 +3,7 @@
 The knowledge-base contains shared engineering knowledge only.
 
 ```text
-knowledge-base/
+content/knowledge-base/
   engineering-principles/
     universal/
   coding-standards/

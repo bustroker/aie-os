@@ -1,35 +1,70 @@
 # AIE OS
 
-`AIE OS` standardizes reusable engineering knowledge, reusable agent
-configuration, reusable skills, and deterministic context delivery for coding
-agents.
+`AIE OS` standardizes reusable engineering knowledge, reusable agent configuration, reusable skills, and deterministic context delivery for coding agents.
+
+## Usage TLDR;
+
+### Setup
+
+```bash
+cd xample-app
+git clone <aie-os-repo-url> aie-os
+cd aie-os/cli && npm run build
+```
+
+### Usage
+
+```bash
+cd xample-app
+bash aie-os/bin/aie-os init [--project-path /defaults/to/cwd]
+bash aie-os/bin/aie-os build --tool codex [--project-path /defaults/to/cwd]
+```
+
+#### Command `bash aie-os/bin/aie-os init` takes options:
+* `--project-path /path/to/app/project/dir`: optiona, defaults to current directory;
+* `--kb-path /path/to/knowledge-base/dir`: optiona, prompted if not provided;
+* `--agent-path /path/to/agent/dir`: optiona, prompted if not provided;
+* `--skills-path /path/to/skills/dir`: optiona, prompted if not provided.
+
+**Other options prompted**
+// explain here the relation between the option names and the files names found where.
+
+
+#### Command `bash aie-os/bin/aie-os build` takes options:
+* `--tool`: mandatory. accepts `codex`.
+* `--project-path /path/to/project` optional, defaults to current directory.
+
+ 
 
 ## Structure
 
 ```text
 aie-os/
-  knowledge-base/
-    engineering-principles/
-      universal/
-    coding-standards/
-      universal/
-      language/
-      application-type/
-      framework/
-  agent/
-    style/
-    persona/
-  skills/
+  content/
+    knowledge-base/
+      engineering-principles/
+        universal/
+      coding-standards/
+        universal/
+        language/
+        application-type/
+        framework/
+    agent/
+      style/
+      persona/
+    skills/
+  bin/
   cli/
 ```
 
-- `knowledge-base/` holds shared engineering principles and coding standards.
-- `agent/` holds shared style and persona definitions.
-- `skills/` holds shared skills.
-- `cli/` sets up a project and builds agent-specific artifacts.
+- `content/knowledge-base/` holds shared engineering principles and coding standards.
+- `content/agent/` holds shared style and persona definitions.
+- `content/skills/` holds shared skills.
+- `bin/` holds the local CLI wrapper.
+- `cli/` contains the CLI implementation.
 
-## Target Project
-
+## AIE-OS project structure
+Below the general agent-agnostic structure. Agent specific artefacts would be added by the build execution, after effective-context files.
 ```text
 xample-app/
   aie-os/
@@ -40,35 +75,21 @@ xample-app/
     build/
       effective-context.json
       effective-context.md
-  AGENTS.md
 ```
 
 - `aie-os/` is the local clone of this repo.
-- `.aie-os/` contains project-local AIE OS configuration and generated files.
+- `.aie-os/` contains project-local AIE OS configuration and generated artifacts.
 
-## Usage
 
-```bash
-mkdir xample-app
-cd xample-app
-git clone <aie-os-repo-url> aie-os
-bash aie-os/cli/build-cli.sh
-bash aie-os/cli/init-aie-os.sh
-bash aie-os/cli/build-agent-context.sh --tool codex
-```
+## Building Context
 
-command `bash aie-os/cli/init-aie-os.sh` takes optional arguments:
-  * `--project-path /path/to/project` defaults to current directory;
-  * `--kb-path /path/to/knowledge-base` prompted if not provided;
-  * `--agent-path /path/to/agent` prompted if not provided;
-  * `--skills-path /path/to/skills` prompted if not provided.
-- `bash aie-os/cli/build-agent-context.sh --tool codex [--project-path /path/to/project]`
-  (`--project-path` defaults to current directory)
+- `build` resolves shared knowledge, agent configuration, shared skills, project coding standards, and project skills into one canonical output.
+- Canonical outputs:
+  - `.aie-os/build/effective-context.json`
+  - `.aie-os/build/effective-context.md`
+- Adapters consume `effective-context.json` as the machine-readable contract and may also use `effective-context.md`.
+- Adapters write tool-specific artifacts only.
 
-- `init-aie-os.sh` prompts for every parameter, creates the `.aie-os/` folder
-  structure with `README.md` placeholders only, and writes `.aie-os/aie-os.json`.
-- `application type` supports none implicitly and defaults to none.
-- `build-agent-context.sh --tool codex` reads `.aie-os/aie-os.json`, generates
-  `.aie-os/build/effective-context.json` and `.aie-os/build/effective-context.md`,
-  then passes the canonical context into the selected adapter.
-- The `codex` adapter writes `AGENTS.md`.
+## Agent Adapters
+
+- `codex` writes `AGENTS.md`.

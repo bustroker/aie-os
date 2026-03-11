@@ -241,12 +241,12 @@ function detectInitDefaults(projectPath: string): InitPromptDefaults {
   const bundledRoot = path.resolve(__dirname, "..", "..");
 
   return {
-    kbPath: detectSharedDefault(projectPath, path.join(localAieOsPath, "knowledge-base"), path.join(bundledRoot, "knowledge-base")),
-    agentPath: detectSharedDefault(projectPath, path.join(localAieOsPath, "agent"), path.join(bundledRoot, "agent")),
+    kbPath: detectSharedDefault(projectPath, path.join(localAieOsPath, "content", "knowledge-base"), path.join(bundledRoot, "content", "knowledge-base")),
+    agentPath: detectSharedDefault(projectPath, path.join(localAieOsPath, "content", "agent"), path.join(bundledRoot, "content", "agent")),
     skillsPath: detectOptionalSharedDefault(
       projectPath,
-      path.join(localAieOsPath, "skills"),
-      path.join(bundledRoot, "skills"),
+      path.join(localAieOsPath, "content", "skills"),
+      path.join(bundledRoot, "content", "skills"),
     ),
   };
 }

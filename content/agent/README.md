@@ -1,9 +1,9 @@
 # Agent Configuration
 
-The `agent/` directory contains shared agent configuration.
+The `content/agent/` directory contains shared agent configuration.
 
 ```text
-agent/
+content/agent/
   style/
   persona/
 ```
