@@ -78,14 +78,14 @@ async function resolveSections(input: BuildInput): Promise<EffectiveContextSecti
     );
   }
 
-  if (input.manifest.selection.applicationType !== "none") {
+  for (const applicationType of input.manifest.selection.applicationTypes) {
     sections.push(
       ...(await loadDirectorySections(
         path.join(
           knowledgeBasePath,
           "coding-standards",
           "application-type",
-          input.manifest.selection.applicationType,
+          applicationType,
         ),
         projectPath,
         "Application-Type Standards",
@@ -212,7 +212,7 @@ export async function renderEffectiveContextMarkdown(input: {
     `- Persona: ${input.effectiveContext.manifest.selection.persona}`,
     `- Style: ${input.effectiveContext.manifest.selection.style}`,
     `- Languages: ${formatList(input.effectiveContext.manifest.selection.languages)}`,
-    `- Application type: ${formatValue(input.effectiveContext.manifest.selection.applicationType)}`,
+    `- Application types: ${formatList(input.effectiveContext.manifest.selection.applicationTypes)}`,
     `- Frameworks: ${formatList(input.effectiveContext.manifest.selection.frameworks)}`,
     `- Knowledge base path: ${input.effectiveContext.manifest.paths.knowledgeBase}`,
     `- Agent path: ${input.effectiveContext.manifest.paths.agent}`,

@@ -1,0 +1,40 @@
+### Initialize AIE-OS
+```bash
+cd xample-app
+bash aie-os/bin/aie-os init --project-path /defaults/to/cwd
+```
+
+If all options are provided, `init` runs without prompting.
+
+#### Command `bash aie-os/bin/aie-os init` takes options:
+* `--project-path /path/to/app/project/dir`: optional, defaults to current directory;
+* `--kb-path /path/to/knowledge-base/dir`: optional, prompted if not provided;
+* `--agent-path /path/to/agent/dir`: optional, prompted if not provided;
+* `--skills-path /path/to/skills/dir`: optional, prompted if not provided.
+* `--agent-persona <name>`: optional, prompted if not provided. Available values come from markdown file names under `[agent-path]/persona/`.
+* `--agent-style <name>`: optional, prompted if not provided. Available values come from markdown file names under `[agent-path]/style/`.
+* `--languages <name1,name2>`: optional, prompted if not provided. Available values come from folder names under `[kb-path]/coding-standards/language/`.
+* `--application-type <name1,name2>`: optional, prompted if not provided. Available values come from folder names under `[kb-path]/coding-standards/application-type/`.
+* `--frameworks <name1,name2>`: optional, prompted if not provided. Available values come from folder names under `[kb-path]/coding-standards/framework/`.
+
+E.g.
+```bash
+bash ./bin/aie-os init \
+  --project-path ./xample-app \
+  --kb-path ./content/knowledge-base \
+  --agent-path ./content/agent \
+  --skills-path ./content/skills \
+  --agent-persona software-developer \
+  --agent-style concise-collaborative \
+  --languages csharp,typescript \
+  --application-type api,mobile \
+  --frameworks react-native
+```
+
+### Build agent context.
+```bash
+cd xample-app
+bash aie-os/bin/aie-os build --tool codex --project-path /defaults/to/cwd
+```
+* `--tool`: mandatory. Accepts `codex`. More adapters can be added.
+* `--project-path /path/to/project` optional, defaults to current directory.

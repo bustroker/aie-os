@@ -32,6 +32,8 @@ type BuildExecutionOptions = {
 type InitExecutionOptions = {
   command: "init";
   defaults: InitPromptDefaults;
+  initialSelections: Partial<InitSelections>;
+  providedPaths: Partial<InitPromptDefaults>;
   projectPath: string;
 };
 
@@ -44,7 +46,7 @@ type InitPromptDefaults = {
 };
 
 type InitSelections = {
-  applicationType: string;
+  applicationTypes: string[];
   frameworks: string[];
   languages: string[];
   persona: string;
@@ -61,7 +63,7 @@ const TOOL_NAME = "codex";
 export const usageText = `AIE OS
 
 Usage:
-  init [--project-path <path>] [--kb-path <path>] [--agent-path <path>] [--skills-path <path>]
+  init [--project-path <path>] [--kb-path <path>] [--agent-path <path>] [--skills-path <path>] [--agent-persona <name>] [--agent-style <name>] [--languages <a,b>] [--application-type <a,b>] [--frameworks <a,b>]
   build --tool codex [--project-path <path>]
 
 Options:
@@ -69,6 +71,11 @@ Options:
   --kb-path                         Shared knowledge-base path. Prompted explicitly during init if not provided.
   --agent-path                      Shared agent path. Prompted explicitly during init if not provided.
   --skills-path                     Shared skills path. Prompted explicitly during init if not provided.
+  --agent-persona                   Agent persona. Prompted during init if not provided.
+  --agent-style                     Agent style. Prompted during init if not provided.
+  --languages                       Comma-separated languages. Prompted during init if not provided.
+  --application-type                Comma-separated application types. Prompted during init if not provided.
+  --frameworks                      Comma-separated frameworks. Prompted during init if not provided.
   --tool                            Delivery adapter target. Only codex is supported in v1.
   -h, --help                        Show help.`;
 
@@ -124,10 +131,12 @@ export function resolveExecutionOptions(
   const projectPath = resolveProjectPath(cwd, parsed.options["--project-path"]);
 
   if (parsed.help) {
-    return parsed.command === "init"
+        return parsed.command === "init"
       ? {
           command: "init",
           defaults: detectInitDefaults(projectPath),
+          initialSelections: {},
+          providedPaths: {},
           projectPath,
         }
       : {
@@ -160,6 +169,11 @@ export function resolveExecutionOptions(
     "--kb-path",
     "--agent-path",
     "--skills-path",
+    "--agent-persona",
+    "--agent-style",
+    "--languages",
+    "--application-type",
+    "--frameworks",
   ]);
 
   const detectedDefaults = detectInitDefaults(projectPath);
@@ -175,6 +189,18 @@ export function resolveExecutionOptions(
       ),
       kbPath: coalesceOption(parsed.options["--kb-path"], detectedDefaults.kbPath),
     },
+    initialSelections: {
+      applicationTypes: parseCsvSelections(parsed.options["--application-type"]),
+      frameworks: parseCsvSelections(parsed.options["--frameworks"]),
+      languages: parseCsvSelections(parsed.options["--languages"]),
+      persona: normalizeOptionalSelection(parsed.options["--agent-persona"]),
+      style: normalizeOptionalSelection(parsed.options["--agent-style"]),
+    },
+    providedPaths: {
+      agentPath: normalizeCliPathOption(cwd, projectPath, parsed.options["--agent-path"]),
+      kbPath: normalizeCliPathOption(cwd, projectPath, parsed.options["--kb-path"]),
+      skillsPath: normalizeCliPathOption(cwd, projectPath, parsed.options["--skills-path"]),
+    },
     projectPath,
   };
 }
@@ -188,7 +214,13 @@ export async function initProject(options: InitExecutionOptions): Promise<void> 
   });
 
   try {
-    const manifest = await collectManifest(options.projectPath, options.defaults, reader);
+    const manifest = await collectManifest(
+      options.projectPath,
+      options.defaults,
+      options.initialSelections,
+      options.providedPaths,
+      reader,
+    );
     await scaffoldProject(options.projectPath, manifest);
   } finally {
     reader.close();
@@ -286,42 +318,51 @@ function resolveProjectPath(cwd: string, explicitPath?: string): string {
 async function collectManifest(
   projectPath: string,
   defaults: InitPromptDefaults,
+  initialSelections: Partial<InitSelections>,
+  providedPaths: Partial<InitPromptDefaults>,
   reader: readline.Interface,
 ): Promise<Manifest> {
-  const knowledgeBasePath = await promptPath(reader, {
-    defaultValue: defaults.kbPath,
-    description:
-      "AIE OS reads shared engineering principles and coding standards from this folder.",
-    promptLabel: "knowledge base path",
-    optionName: "--kb-path",
-    projectPath,
-  });
+  const knowledgeBasePath = providedPaths.kbPath
+    ? providedPaths.kbPath
+    : await promptPath(reader, {
+      defaultValue: defaults.kbPath,
+      description:
+        "AIE OS reads shared engineering principles and coding standards from this folder.",
+      promptLabel: "knowledge base path",
+      optionName: "--kb-path",
+      projectPath,
+    });
   await ensureDirectoryType(resolveAgainstProject(projectPath, knowledgeBasePath), "Knowledge base path");
 
-  const agentPath = await promptPath(reader, {
-    defaultValue: defaults.agentPath,
-    description:
-      "AIE OS reads persona and style definitions from this folder.",
-    promptLabel: "agent path",
-    optionName: "--agent-path",
-    projectPath,
-  });
+  const agentPath = providedPaths.agentPath
+    ? providedPaths.agentPath
+    : await promptPath(reader, {
+      defaultValue: defaults.agentPath,
+      description:
+        "AIE OS reads persona and style definitions from this folder.",
+      promptLabel: "agent path",
+      optionName: "--agent-path",
+      projectPath,
+    });
   await ensureDirectoryType(resolveAgainstProject(projectPath, agentPath), "Agent path");
 
-  const skillsPath = await promptOptionalPath(reader, {
-    defaultValue: defaults.skillsPath,
-    description:
-      "AIE OS reads shared skills from this folder. Type none to disable shared skills.",
-    promptLabel: "skills path",
-    optionName: "--skills-path",
-    projectPath,
-  });
+  const skillsPath = providedPaths.skillsPath !== undefined
+    ? normalizeOptionalProvidedPath(projectPath, providedPaths.skillsPath)
+    : await promptOptionalPath(reader, {
+      defaultValue: defaults.skillsPath,
+      description:
+        "AIE OS reads shared skills from this folder. Type none to disable shared skills.",
+      promptLabel: "skills path",
+      optionName: "--skills-path",
+      projectPath,
+    });
   if (skillsPath.trim() !== "") {
     await ensureDirectoryType(resolveAgainstProject(projectPath, skillsPath), "Skills path");
   }
 
   const selections = await collectSelections(projectPath, {
     agentPath,
+    initialSelections,
     knowledgeBasePath,
   }, reader);
 
@@ -342,6 +383,7 @@ async function collectSelections(
   projectPath: string,
   input: {
     agentPath: string;
+    initialSelections: Partial<InitSelections>;
     knowledgeBasePath: string;
   },
   reader: readline.Interface,
@@ -360,8 +402,13 @@ async function collectSelections(
   const frameworkOptions = await listDirectoryNames(
     path.join(resolvedKnowledgeBasePath, "coding-standards", "framework"),
   );
+  const initialSelections = input.initialSelections;
 
-  const persona = await promptSelect(reader, {
+  const persona = validateSingleSelection(
+    initialSelections.persona,
+    personaOptions,
+    "agent persona",
+  ) ?? await promptSelect(reader, {
     defaultValue: personaOptions.includes("software-developer")
       ? "software-developer"
       : personaOptions[0] ?? null,
@@ -370,7 +417,11 @@ async function collectSelections(
     options: personaOptions,
   });
 
-  const style = await promptSelect(reader, {
+  const style = validateSingleSelection(
+    initialSelections.style,
+    styleOptions,
+    "agent style",
+  ) ?? await promptSelect(reader, {
     defaultValue: styleOptions.includes("concise-collaborative")
       ? "concise-collaborative"
       : styleOptions[0] ?? null,
@@ -379,7 +430,12 @@ async function collectSelections(
     options: styleOptions,
   });
 
-  const languages = await promptMultiSelect(reader, {
+  const languages = validateMultiSelection(
+    initialSelections.languages,
+    languageOptions,
+    "languages",
+    false,
+  ) ?? await promptMultiSelect(reader, {
     allowNone: false,
     defaultValue: languageOptions.length === 1 ? [languageOptions[0]] : [],
     explanation:
@@ -388,15 +444,25 @@ async function collectSelections(
     options: languageOptions,
   });
 
-  const applicationType = await promptSelect(reader, {
+  const applicationTypes = validateMultiSelection(
+    initialSelections.applicationTypes,
+    applicationTypeOptions,
+    "application types",
+    true,
+  ) ?? await promptMultiSelect(reader, {
     allowNone: true,
-    defaultValue: null,
-    explanation: "Application type selects standards for the shape of the application, such as api or mobile.",
-    label: "Application type",
+    defaultValue: [],
+    explanation: "Application type selects standards for the shape of the application, such as api or mobile. Choose one or more, or none when not needed.",
+    label: "Application types",
     options: applicationTypeOptions,
   });
 
-  const frameworks = await promptMultiSelect(reader, {
+  const frameworks = validateMultiSelection(
+    initialSelections.frameworks,
+    frameworkOptions,
+    "frameworks",
+    true,
+  ) ?? await promptMultiSelect(reader, {
     allowNone: true,
     defaultValue: [],
     explanation: "Framework overlays add framework-specific coding standards. Choose none when not needed.",
@@ -405,7 +471,7 @@ async function collectSelections(
   });
 
   return {
-    applicationType,
+    applicationTypes,
     frameworks,
     languages,
     persona,
@@ -643,6 +709,75 @@ function resolveSingleOption(value: string, options: string[]): string | null {
   return options.includes(value) ? value : null;
 }
 
+function parseCsvSelections(value: string | undefined): string[] | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const selections = value
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry !== "");
+
+  return selections.length === 0 ? undefined : selections;
+}
+
+function normalizeOptionalSelection(value: string | undefined): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const normalized = value.trim();
+  return normalized === "" ? undefined : normalized;
+}
+
+function validateSingleSelection(
+  selectedValue: string | undefined,
+  options: string[],
+  label: string,
+  allowNone = false,
+): string | undefined {
+  if (!selectedValue) {
+    return undefined;
+  }
+
+  if (allowNone && selectedValue === "none") {
+    return "none";
+  }
+
+  if (!options.includes(selectedValue)) {
+    throw new Error(`Unsupported ${label}: ${selectedValue}`);
+  }
+
+  return selectedValue;
+}
+
+function validateMultiSelection(
+  selectedValues: string[] | undefined,
+  options: string[],
+  label: string,
+  allowNone: boolean,
+): string[] | undefined {
+  if (!selectedValues) {
+    return undefined;
+  }
+
+  if (selectedValues.length === 1 && selectedValues[0] === "none") {
+    if (allowNone) {
+      return [];
+    }
+
+    throw new Error(`Unsupported ${label}: none`);
+  }
+
+  const invalidSelections = selectedValues.filter((value) => !options.includes(value));
+  if (invalidSelections.length > 0) {
+    throw new Error(`Unsupported ${label}: ${invalidSelections.join(", ")}`);
+  }
+
+  return Array.from(new Set(selectedValues));
+}
+
 function coalesceOption(value: string | undefined, fallback: string): string {
   return value ? value : fallback;
 }
@@ -668,6 +803,34 @@ function normalizeConfiguredPath(projectPath: string, configuredPath: string): s
   }
 
   return toProjectRelative(projectPath, path.resolve(projectPath, configuredPath));
+}
+
+function normalizeOptionalProvidedPath(projectPath: string, configuredPath: string): string {
+  if (configuredPath.trim().toLowerCase() === "none") {
+    return "";
+  }
+
+  return normalizeConfiguredPath(projectPath, configuredPath);
+}
+
+function normalizeCliPathOption(
+  cwd: string,
+  projectPath: string,
+  configuredPath: string | undefined,
+): string | undefined {
+  if (configuredPath === undefined) {
+    return undefined;
+  }
+
+  if (configuredPath.trim().toLowerCase() === "none") {
+    return "none";
+  }
+
+  const absolutePath = path.isAbsolute(configuredPath)
+    ? configuredPath
+    : path.resolve(cwd, configuredPath);
+
+  return toProjectRelative(projectPath, absolutePath);
 }
 
 function resolveAgainstProject(projectPath: string, configuredPath: string): string {

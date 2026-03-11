@@ -9,7 +9,7 @@ export type Manifest = {
     projectSkills: string;
   };
   selection: {
-    applicationType: string;
+    applicationTypes: string[];
     frameworks: string[];
     languages: string[];
     persona: string;
@@ -67,9 +67,9 @@ function normalizeManifest(rawManifest: unknown, manifestPath: string): Manifest
         "selection.languages",
         manifestPath,
       ),
-      applicationType: expectString(
-        selection.applicationType,
-        "selection.applicationType",
+      applicationTypes: expectStringArray(
+        selection.applicationTypes,
+        "selection.applicationTypes",
         manifestPath,
       ),
       frameworks: expectStringArray(
