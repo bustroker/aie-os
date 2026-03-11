@@ -42,3 +42,36 @@ Rules:
 - Add concise markdown files only. `README.md` is descriptive and ignored by `build`.
 - Project-specific coding standards and skills may override shared ones.
 - Shared engineering principles do not have a project-specific override layer.
+
+### Content authoring guidance
+
+- Keep context small. The final effective context must fit comfortably inside agent context windows and still leave room for the task, chat history, and repository code.
+- Prefer many short focused files over a few large files.
+- Recommended size:
+  - one file should usually stay under 150-300 lines
+  - a shared file should usually stay under 1-2 KB of dense text unless it is clearly justified
+  - if one topic grows too much, split it by concern
+- Write these files as operational instructions, not as conversational prompts.
+- Good content is:
+  - explicit
+  - directive
+  - reusable across tasks
+  - easy to scan
+- Prefer:
+  - short rules
+  - bullet lists
+  - clear constraints
+  - concrete preferred and forbidden patterns
+  - small examples only when they clarify the rule
+- Avoid:
+  - long narrative explanations
+  - motivational language
+  - duplicated rules across files
+  - vague advice such as "follow best practices"
+  - tool-specific wording unless the file is intentionally tool-specific
+- Good prompting practices still apply:
+  - be specific
+  - remove ambiguity
+  - state the desired behavior directly
+  - separate general rules from task workflows
+  - prefer deterministic wording over soft suggestions

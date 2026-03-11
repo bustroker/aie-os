@@ -38,3 +38,21 @@ bash aie-os/bin/aie-os build --tool codex --project-path /defaults/to/cwd
 ```
 * `--tool`: mandatory. Accepts `codex`. More adapters can be added.
 * `--project-path /path/to/project` optional, defaults to current directory.
+
+### Ignore AIE OS tool
+
+Do not commit the local `aie-os/` clone inside the target project. Add the local `aie-os/` clone to the target project's `.gitignore`.
+
+```gitignore
+aie-os/
+```
+
+### What is added to the app project repository
+
+Commit to the target project repository:
+- `.aie-os/aie-os.json`
+- `.aie-os/project-coding-standards/`
+- `.aie-os/project-skills/`
+- `.aie-os/build/effective-context.json`
+- `.aie-os/build/effective-context.md`
+- agent-specific generated artefacts (e.g. `AGENTS.md`)
