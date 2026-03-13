@@ -44,6 +44,7 @@ Rules:
 - The available application types are exactly the folder names under `[kb-path]/coding-standards/application-type/`.
 - The available frameworks are exactly the folder names under `[kb-path]/coding-standards/framework/`.
 - Make discovered option names legible, e.g., `language/csharp/*.md`, `application-type/console/*.md`, etc.
+- Shared content should stay reusable across many repositories. Put repo-specific commands and conventions in `.aie-os/project-coding-standards/`.
 - Skills should follow the Agent Skills packaging specification: https://agentskills.io/specification
 - AIE OS integrates skills by folder and does not validate skill internals beyond discovering the skill directory.
 - Add concise markdown files only. `README.md` is descriptive and ignored by `build`.
@@ -76,12 +77,14 @@ Rules:
   - duplicated rules across files
   - vague advice such as "follow best practices"
   - tool-specific wording unless the file is intentionally tool-specific
+  - cross-language wording in language-specific files when the language has a clearer native term
 - Good prompting practices still apply:
   - be specific
   - remove ambiguity
   - state the desired behavior directly
   - separate general rules from task workflows
   - prefer deterministic wording over soft suggestions
+- If a rule could fit in several places, put it in the most specific valid layer.
 
 ### Recommended file structure
 

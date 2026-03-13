@@ -6,50 +6,19 @@ Stable cross-project reasoning rules that guide implementation decisions.
 
 ## Rules
 
-- Ship iteratively. Prefer the smallest valuable change on the direct path to
-  the goal.
-- Choose simplicity over convenience. Prefer simple systems and simple
-  solutions, even when they require more design effort upfront.
-- Optimize for long-term engineering efficiency. Reduce repeated work with
-  automation, better abstractions, and cleaner workflows.
-- Build quality in from the start. Quality is not a cleanup phase after
-  delivery.
-- Reliability is a product requirement. Availability, security, performance,
-  and operability are part of the implementation bar.
-- Preserve clear ownership. Systems, services, and operational responsibilities
-  need explicit owners.
-- Keep boundaries clear and coupling low. Align components with real business
-  capabilities and avoid entangled systems.
-- Design for autonomous evolution. Teams and systems should be able to change,
-  deploy, and recover independently.
-- Treat APIs and interfaces as products. Make contracts explicit, review them
-  early, and evolve them without breaking consumers.
-- Prefer observability over guesswork. Logging, metrics, tracing, alerts, and
-  runbooks are part of system design.
-- Document decisions and operating context. Keep architecture and operational
-  documentation concise, current, and close to the work.
-- Favor measurable improvement over process theater. Use process only when it
-  creates real clarity, safety, or speed.
-- Engineer with the full lifecycle in mind. Building, operating, debugging, and
-  supporting the system are one continuous responsibility.
-- Protect developer velocity by reducing accidental complexity. Tooling,
-  testing, and local workflows should shorten feedback loops.
-- Standardize where it increases consistency and trust. Leave room for local
-  choice only when it does not weaken core principles.
-- Keep environment configuration explicit and fail fast when required settings
-  are missing or invalid.
-- Prefer explicit composition roots for infrastructure and application wiring.
-- Keep production behavior stricter than development behavior.
-- Treat offline, degraded network, and recovery paths as first-class concerns
-  in mobile and distributed systems.
-- Isolate platform-sensitive and infrastructure-sensitive logic behind explicit
-  boundaries.
-- Prefer consistent error models that preserve actionable context across
-  boundaries.
-- Keep delivery pipelines environment-aware and reproducible.
-- Favor designs that can be validated through integration tests and dependency
-  injection construction checks.
-- Use environment-specific configuration instead of hidden runtime defaults.
+- Ship iteratively. Prefer the smallest valuable change on the direct path to the goal.
+- Choose simplicity over convenience. Prefer simpler designs unless complexity is justified by clear value.
+- Optimize for long-term engineering efficiency. Reduce repeated work with automation, reuse, and clearer workflows.
+- Build quality in from the start. Quality is not a cleanup phase after delivery.
+- Reliability is a product requirement. Availability, security, performance, and operability are part of the implementation bar.
+- Preserve clear ownership. Systems and operational responsibilities need explicit owners.
+- Keep boundaries clear and coupling low. Align components with real capabilities and avoid entangled systems.
+- Treat APIs and interfaces as products. Make contracts explicit and evolve them without breaking consumers unnecessarily.
+- Prefer observability over guesswork. Logging, metrics, tracing, alerts, and runbooks are part of system design.
+- Document decisions and operating context. Keep documentation concise, current, and close to the work.
+- Favor measurable improvement over process theater. Use process only when it creates real clarity, safety, or speed.
+- Protect developer velocity by reducing accidental complexity.
+- Standardize where it increases consistency and trust. Local variation is acceptable only when it does not weaken core principles.
 
 ## Preferred Patterns
 
@@ -69,4 +38,3 @@ Stable cross-project reasoning rules that guide implementation decisions.
 - Swallowing exceptions or returning ambiguous empty results without context.
 - Process that adds ceremony without improving outcomes.
 - Local conventions that weaken shared principles without explicit justification.
-- Implicit runtime defaults for critical environment or deployment settings.
