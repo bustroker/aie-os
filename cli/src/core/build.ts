@@ -27,6 +27,12 @@ export type BuildOutput = {
   tool: "codex";
 };
 
+type ConditionalAppliesTo = {
+  applicationTypes: string[];
+  frameworks: string[];
+  languages: string[];
+};
+
 export async function buildAgentContext(input: BuildInput): Promise<BuildOutput> {
   const resolvedContext = await resolveContext(input);
   const effectiveContext: EffectiveContext = {
@@ -119,6 +125,15 @@ async function resolveContext(input: BuildInput): Promise<{
     );
   }
 
+  sections.push(
+    ...(await loadConditionalSections(
+      path.join(knowledgeBasePath, "coding-standards", "conditional"),
+      projectPath,
+      input.manifest.selection,
+      "Conditional Coding Standards",
+    )),
+  );
+
   if (skillsPath) {
     skills.push(...(await loadSkillDefinitions(skillsPath, projectPath, "shared")));
   }
@@ -167,6 +182,37 @@ async function loadDirectorySections(
   return Promise.all(
     files.map(async (filePath) => createEffectiveContextSection(filePath, projectPath, layer)),
   );
+}
+
+async function loadConditionalSections(
+  directoryPath: string,
+  projectPath: string,
+  selection: Manifest["selection"],
+  layer: string,
+): Promise<EffectiveContextSection[]> {
+  if (!(await fileExists(directoryPath))) {
+    return [];
+  }
+
+  const files = await listMarkdownFiles(directoryPath);
+  const sections: EffectiveContextSection[] = [];
+
+  for (const filePath of files) {
+    const contents = await readText(filePath);
+    const appliesTo = parseConditionalAppliesTo(contents, filePath);
+
+    if (!appliesTo) {
+      continue;
+    }
+
+    if (!matchesConditionalAppliesTo(appliesTo, selection)) {
+      continue;
+    }
+
+    sections.push(createEffectiveContextSectionFromContents(filePath, projectPath, layer, contents));
+  }
+
+  return sections;
 }
 
 async function loadSkillDefinitions(
@@ -300,6 +346,16 @@ async function createEffectiveContextSection(
 ): Promise<EffectiveContextSection> {
   const contents = await readText(filePath);
 
+  return createEffectiveContextSectionFromContents(filePath, projectPath, layer, contents);
+}
+
+function createEffectiveContextSectionFromContents(
+  filePath: string,
+  projectPath: string,
+  layer: string,
+  contents: string,
+): EffectiveContextSection {
+
   return {
     file: toOutputFileReference(projectPath, filePath),
     heading: readMarkdownTitle(contents) || path.basename(filePath, ".md"),
@@ -373,6 +429,144 @@ function parseSourceBlocks(contents: string): ParsedSourceBlocks {
   }
 
   return parsed;
+}
+
+function parseConditionalAppliesTo(
+  contents: string,
+  filePath: string,
+): ConditionalAppliesTo | null {
+  const frontmatter = readFrontmatterBlock(contents);
+
+  if (!frontmatter) {
+    return null;
+  }
+
+  const lines = frontmatter.split(/\r?\n/u);
+  const rawAppliesToLine = lines.find((line) => line.trimStart().startsWith("applies_to:"));
+
+  if (rawAppliesToLine && rawAppliesToLine.trim() !== "applies_to:") {
+    throw new Error(
+      `Expected applies_to to use a nested block in conditional coding standard: ${filePath}`,
+    );
+  }
+
+  const appliesToIndex = lines.findIndex((line) => line.trim() === "applies_to:");
+
+  if (appliesToIndex === -1) {
+    return null;
+  }
+
+  const appliesToLines: string[] = [];
+
+  for (let index = appliesToIndex + 1; index < lines.length; index += 1) {
+    const line = lines[index];
+
+    if (line.startsWith("  ")) {
+      appliesToLines.push(line);
+      continue;
+    }
+
+    if (line.trim() === "") {
+      continue;
+    }
+
+    break;
+  }
+
+  if (appliesToLines.length === 0) {
+    return null;
+  }
+
+  const parsed: ConditionalAppliesTo = {
+    applicationTypes: [],
+    frameworks: [],
+    languages: [],
+  };
+
+  for (const line of appliesToLines) {
+    const match = line.match(
+      /^  (languages|application_types|frameworks):\s*(.+?)\s*$/u,
+    );
+
+    if (!match) {
+      throw new Error(
+        `Invalid applies_to entry in conditional coding standard: ${filePath}`,
+      );
+    }
+
+    const values = parseInlineStringArray(match[2], filePath);
+
+    switch (match[1]) {
+      case "languages":
+        parsed.languages = values;
+        break;
+      case "application_types":
+        parsed.applicationTypes = values;
+        break;
+      case "frameworks":
+        parsed.frameworks = values;
+        break;
+      default:
+        throw new Error(
+          `Unsupported applies_to dimension in conditional coding standard: ${filePath}`,
+        );
+    }
+  }
+
+  if (
+    parsed.languages.length === 0 &&
+    parsed.applicationTypes.length === 0 &&
+    parsed.frameworks.length === 0
+  ) {
+    return null;
+  }
+
+  return parsed;
+}
+
+function readFrontmatterBlock(contents: string): string | null {
+  const match = contents.match(/^---\r?\n([\s\S]*?)\r?\n---/u);
+  return match ? match[1] : null;
+}
+
+function parseInlineStringArray(value: string, filePath: string): string[] {
+  const match = value.trim().match(/^\[(.*)\]$/u);
+
+  if (!match) {
+    throw new Error(
+      `Expected applies_to values to be inline string arrays in conditional coding standard: ${filePath}`,
+    );
+  }
+
+  const inner = match[1].trim();
+
+  if (inner === "") {
+    return [];
+  }
+
+  return inner
+    .split(",")
+    .map((item) => trimYamlScalar(item))
+    .filter((item) => item !== "");
+}
+
+function matchesConditionalAppliesTo(
+  appliesTo: ConditionalAppliesTo,
+  selection: Manifest["selection"],
+): boolean {
+  return (
+    matchesConditionalDimension(selection.languages, appliesTo.languages) &&
+    matchesConditionalDimension(selection.applicationTypes, appliesTo.applicationTypes) &&
+    matchesConditionalDimension(selection.frameworks, appliesTo.frameworks)
+  );
+}
+
+function matchesConditionalDimension(selected: string[], required: string[]): boolean {
+  if (required.length === 0) {
+    return true;
+  }
+
+  return required.some((value) => selected.includes(value));
 }
 
 function removeTitle(contents: string): string {

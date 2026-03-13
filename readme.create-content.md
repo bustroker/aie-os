@@ -10,6 +10,8 @@ AIE OS builds context from three shared sources plus two project-local sources:
     - `[kb-path]/coding-standards/language/<name>/*.md`
     - `[kb-path]/coding-standards/application-type/<name>/*.md`
     - `[kb-path]/coding-standards/framework/<name>/*.md`
+  - optional structure:
+    - `[kb-path]/coding-standards/conditional/*.md`
   - purpose:
     - engineering principles and coding standards shared across projects
   - examples:
@@ -37,7 +39,11 @@ AIE OS builds context from three shared sources plus two project-local sources:
     - project-specific overrides and additions
 
 Rules:
-- `<name>` folder names under `language/`, `application-type/`, and `framework/` are the option names discovered by `init`. Make them legible, e.g., `language/csharp/*.md`, `application-type/console/*.md`, etc.
+- `<name>` folder names under `language/`, `application-type/`, and `framework/` are the option names discovered by `init`.
+- The available languages are exactly the folder names under `[kb-path]/coding-standards/language/`.
+- The available application types are exactly the folder names under `[kb-path]/coding-standards/application-type/`.
+- The available frameworks are exactly the folder names under `[kb-path]/coding-standards/framework/`.
+- Make discovered option names legible, e.g., `language/csharp/*.md`, `application-type/console/*.md`, etc.
 - Skills should follow the Agent Skills packaging specification: https://agentskills.io/specification
 - AIE OS integrates skills by folder and does not validate skill internals beyond discovering the skill directory.
 - Add concise markdown files only. `README.md` is descriptive and ignored by `build`.
@@ -142,3 +148,41 @@ This section is not included in the final agent-facing context.
 
 - 
 ```
+
+### Conditional coding standards
+
+Use `coding-standards/conditional/` only for advanced cases where one file should apply only when multiple selected dimensions match together.
+
+This is optional. A basic knowledge base does not need it.
+
+Each conditional file must use frontmatter:
+
+```md
+---
+applies_to:
+  languages: [csharp]
+  application_types: [api]
+  frameworks: [fastendpoints]
+---
+```
+
+Matching rules:
+
+- Different dimensions are matched with `AND`.
+- Multiple values inside the same dimension are matched with `OR`.
+- If `applies_to` is missing or empty, the file matches nowhere and must not be included.
+- If one dimension is not specified, it does not contribute any match condition.
+
+Examples:
+
+- `languages: [csharp]` and `application_types: [api]`
+  - applies only when the selected language includes `csharp` and the selected application type includes `api`
+- `frameworks: [react-native, expo]`
+  - applies when the selected frameworks include `react-native` or `expo`
+
+Use this for true cross-dimension rules such as:
+
+- defaults for new C# APIs
+- rules that apply only to TypeScript mobile apps
+
+Do not use `conditional/` for normal language-only, application-type-only, or framework-only rules.

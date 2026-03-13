@@ -11,6 +11,7 @@ content/knowledge-base/
     language/
     application-type/
     framework/
+    conditional/
 ```
 
 - `engineering-principles/universal/` contains shared engineering principles.
@@ -18,3 +19,4 @@ content/knowledge-base/
 - `coding-standards/language/` contains language-specific standards.
 - `coding-standards/application-type/` contains app-type-specific standards.
 - `coding-standards/framework/` contains framework-specific standards.
+- `coding-standards/conditional/` contains optional standards that apply only when multiple selected dimensions match.
